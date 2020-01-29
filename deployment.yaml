@@ -1,0 +1,103 @@
+{{- $pvEnabled := .Values.pv.enabled -}}
+{{- $clusterName := .Chart.Name -}}
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: {{ .Chart.Name }}
+  labels:
+    app: {{ .Chart.Name }}-app
+  namespace: {{ .Values.cluster.namespace }}
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}-app
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}-app
+    spec:
+      hostname: {{ .Chart.Name }}
+      containers:
+      - args:
+        {{- if .Values.deploy.args  }}
+        {{- range .Values.deploy.args }}
+        - --{{ .key }}={{ .value }}
+        {{- end -}}
+        {{- end }}
+        command:
+        {{- if .Values.deploy.cmds }}
+        {{- range .Values.deploy.cmds }}
+        - {{ .cmd }}
+        {{- end }}
+        {{- end }}
+        name: {{ .Chart.Name }}-container
+        {{ if .Values.docker.image.version }}
+        image: "{{ .Values.docker.image.address }}:{{ .Values.docker.image.version }}"
+        {{ else }}
+        image: {{ .Values.docker.image.address | quote }}
+        {{ end }}
+        imagePullPolicy: Always
+        {{- if .Values.deploy.volumes }}
+        volumeMounts:
+        {{- range .Values.deploy.volumes }}
+        - mountPath: {{ .mountPath }}
+          name: {{ .name }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.deploy.containerPort }}
+        ports:
+        - containerPort: {{ .Values.deploy.containerPort }}
+        {{- end }}
+        {{- if .Values.deploy.envs }}
+        env:
+        {{- range .Values.deploy.envs }}
+        - name: {{ .name }}
+          value: {{ .value | quote }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.deploy.resources }}
+        resources:
+          limits:
+            memory: {{ .Values.deploy.resources.limits.memory }}
+            {{- if .Values.deploy.resources.limits.cpu }}
+            cpu: {{ .Values.deploy.resources.limits.cpu }}
+            {{- end }}
+          requests:
+            memory: {{ .Values.deploy.resources.requests.memory }}
+            {{- if .Values.deploy.resources.requests.cpu }}
+            cpu: {{ .Values.deploy.resources.requests.cpu }}
+            {{- end }}
+        {{- end }}
+      {{- if .Values.deploy.tolerations }}
+      tolerations:
+      - key: {{ .Values.deploy.tolerations.key }}
+        operator: {{ .Values.deploy.tolerations.operator | default "Equal" | quote }}
+        value: {{ .Values.deploy.tolerations.value | quote }}
+        effect: {{ .Values.deploy.tolerations.effect | default "NoSchedule" }}
+      {{- end }}
+      {{- if .Values.deploy.volumes }}
+      volumes:
+      {{- range .Values.deploy.volumes }}
+      - name: {{ .name }}
+        {{- if .pv }}
+        persistentVolumeClaim:
+          claimName: {{ $clusterName }}-pvc
+        {{- else if .configMap }}
+        configMap:
+          name: {{ $clusterName }}-config
+          {{- if .items }}
+          items:
+          {{- range .items }}
+          - key: {{ .key }}
+            path: {{ .path }}
+          {{- end }}
+          {{- end }}
+        {{- else }}
+        hostPath:
+          path: {{ .path }}
+          type: {{ .type }}
+        {{- end }}
+      {{- end }}
+      {{- end }}
+
