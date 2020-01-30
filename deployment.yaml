@@ -1,34 +1,37 @@
-{{- $pvEnabled := .Values.pv.enabled -}}
-{{- $clusterName := .Chart.Name -}}
+{{- $chartName := .Chart.Name -}}
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: {{ .Chart.Name }}
+  name: {{ $chartName }}
   labels:
-    app: {{ .Chart.Name }}-app
+    app: {{ $chartName }}-app
   namespace: {{ .Values.cluster.namespace }}
 spec:
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
-      app: {{ .Chart.Name }}-app
+      app: {{ $chartName }}-app
   template:
     metadata:
       labels:
-        app: {{ .Chart.Name }}-app
+        app: {{ $chartName }}-app
     spec:
-      hostname: {{ .Chart.Name }}
-      {{- if .Values.deploy.initContainers  }}
+      hostname: {{ $chartName }}
+
+      {{- if .Values.deploy.initContainers }}
       initContainers:
-        - name: init-{{ .Chart.Name }}-container
-          image: "{{ .Values.deploy.initContainers.docker.image.address }}:{{ .Values.deploy.initContainers.docker.image.version }}"
+        {{- range .Values.deploy.initContainers }}
+        - name: init-{{ .dockerImage.address }}-container
+          image: "{{ .dockerImage.address }}:{{ .dockerImage.version }}"
           command:
-          {- if .Values.deploy.initContainers.cmds }}
-          {{- range .Values.deploy.initContainers.cmds }}
-          - {{ .cmd }}
+          {- if .dockerImage.commands }}
+          {{- range .dockerImage.commands }}
+          - {{ .command }}
           {{- end }}
           {{- end }}
+        {{- end }}
       {{- end }}
+
       containers:
       - args:
         {{- if .Values.deploy.args  }}
@@ -42,7 +45,7 @@ spec:
         - {{ .cmd }}
         {{- end }}
         {{- end }}
-        name: {{ .Chart.Name }}-container
+        name: {{ $chartName }}-container
         {{ if .Values.docker.image.version }}
         image: "{{ .Values.docker.image.address }}:{{ .Values.docker.image.version }}"
         {{ else }}
@@ -70,16 +73,17 @@ spec:
         {{- if .Values.deploy.resources }}
         resources:
           limits:
-            memory: {{ .Values.deploy.resources.limits.memory }}
+            memory: {{ .Values.deploy.resources.limits.memory | default "256Mi" }}
             {{- if .Values.deploy.resources.limits.cpu }}
             cpu: {{ .Values.deploy.resources.limits.cpu }}
             {{- end }}
           requests:
-            memory: {{ .Values.deploy.resources.requests.memory }}
+            memory: {{ .Values.deploy.resources.requests.memory | default "128Mi" }}
             {{- if .Values.deploy.resources.requests.cpu }}
             cpu: {{ .Values.deploy.resources.requests.cpu }}
             {{- end }}
         {{- end }}
+        
       {{- if .Values.deploy.tolerations }}
       tolerations:
       - key: {{ .Values.deploy.tolerations.key }}
@@ -87,16 +91,17 @@ spec:
         value: {{ .Values.deploy.tolerations.value | quote }}
         effect: {{ .Values.deploy.tolerations.effect | default "NoSchedule" }}
       {{- end }}
+
       {{- if .Values.deploy.volumes }}
       volumes:
       {{- range .Values.deploy.volumes }}
       - name: {{ .name }}
         {{- if .pv }}
         persistentVolumeClaim:
-          claimName: {{ $clusterName }}-pvc
+          claimName: {{ $chartName }}-pvc
         {{- else if .configMap }}
         configMap:
-          name: {{ $clusterName }}-config
+          name: {{ $chartName }}-config
           {{- if .items }}
           items:
           {{- range .items }}
