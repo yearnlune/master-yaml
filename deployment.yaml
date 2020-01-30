@@ -18,6 +18,17 @@ spec:
         app: {{ .Chart.Name }}-app
     spec:
       hostname: {{ .Chart.Name }}
+      {{- if .Values.deploy.initContainers  }}
+      initContainers:
+        - name: init-{{ .Chart.Name }}-container
+          image: "{{ .Values.deploy.initContainers.docker.image.address }}:{{ .Values.deploy.initContainers.docker.image.version }}"
+          command:
+          {- if .Values.deploy.initContainers.cmds }}
+          {{- range .Values.deploy.initContainers.cmds }}
+          - {{ .cmd }}
+          {{- end }}
+          {{- end }}
+      {{- end }}
       containers:
       - args:
         {{- if .Values.deploy.args  }}
