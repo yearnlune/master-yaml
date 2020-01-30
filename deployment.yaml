@@ -51,7 +51,7 @@ spec:
         {{ else }}
         image: {{ .Values.docker.image.address | quote }}
         {{ end }}
-        imagePullPolicy: {{ .Values.docker.image.address | default "IfNotPresent" }}
+        imagePullPolicy: {{ .Values.docker.image.imagePullPolicy | default "IfNotPresent" }}
         {{- if .Values.deploy.volumes }}
         volumeMounts:
         {{- range .Values.deploy.volumes }}
