@@ -1,0 +1,24 @@
+{{- $chartName := .Chart.Name -}}
+kind: Service
+apiVersion: v1
+metadata:
+  name: {{ $chartName }}
+  namespace: {{ .Values.cluster.namespace }}
+spec:
+  ports:
+  {{- range .Values.service.ports }}
+  - name: {{ .name | quote }}
+    {{- if .nodePort }}
+    nodePort: {{ .nodePort }}
+    {{- end }}
+    protocol: {{ .protocol }}
+    port: {{ .port }}
+    targetPort: {{ .targetPort }}
+  {{- end }}
+  type: {{ .Values.service.type | default "ClusterIP" | quote }}
+  selector:
+    app: {{ $chartName }}-app
+  {{- range .Values.service.externalIPs }}
+  externalIPs:
+    -  {{ .externalIP }}
+  {{- end }}
