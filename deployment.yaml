@@ -83,7 +83,19 @@ spec:
             cpu: {{ .Values.deploy.resources.requests.cpu }}
             {{- end }}
         {{- end }}
-        
+        {{- if .Values.deploy.livenessProbe }}
+        livenessProbe:
+          {{- if .Values.deploy.livenessProbe.httpGet }}
+          httpGet:
+            path: {{ .Values.deploy.livenessProbe.httpGet.path | default "/_/healthcheck" }}
+            port: {{ .Values.deploy.containerPort | default "api" }}
+            scheme: HTTP
+          {{- end }}
+          timeoutSeconds: 1
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        {{- end }}
       {{- if .Values.deploy.tolerations }}
       tolerations:
       - key: {{ .Values.deploy.tolerations.key }}
