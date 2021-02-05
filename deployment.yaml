@@ -87,7 +87,7 @@ spec:
         livenessProbe:
           {{- if .Values.deploy.livenessProbe.httpGet }}
           httpGet:
-            path: {{ .Values.deploy.livenessProbe.httpGet.path | default "/_/healthcheck" }}
+            path: {{ .Values.deploy.livenessProbe.httpGet.path | default "/_/health" }}
             port: {{ .Values.deploy.containerPort | default "api" }}
             scheme: HTTP
           {{- end }}
